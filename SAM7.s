@@ -52,8 +52,13 @@ __heap_limit
                 
 				
 				AREA    DATA, DATA, READONLY, ALIGN=3
+                ;AREA    DATA, DATA, READWRITE, ALIGN=3
 Msg         DCB     " It fucking works! I'm so fucking happy! ", 10, 13, 0
                 PRESERVE8
+
+                ;AREA    DATA, DATA, READWRITE, ALIGN=3
+;IRQ_Cnt     DCB     123
+;                PRESERVE8
 
 
 ; Area Definition and Entry Point
@@ -92,7 +97,12 @@ Undef_Handler   B       Undef_Handler
 SWI_Handler     B       SWI_Handler
 PAbt_Handler    B       PAbt_Handler
 DAbt_Handler    B       DAbt_Handler
-IRQ_Handler     B       IRQ_Handler
+
+
+IRQ_Handler     
+                B       Timer_IRQ
+
+
 FIQ_Handler     B       FIQ_Handler
 
 
@@ -258,6 +268,7 @@ MC_RCR  EQU     0x00            ; MC_RCR Offset
 				
 ENTRYPOINT      
 
+
 ; Включение тактирования PIOA
 				LDR		R0, =PMC_BASE
 				MOV 	R1, #1
@@ -319,7 +330,28 @@ ENTRYPOINT
 				MOV 	R1, #5
 				LSL 	R1, #4
 				STR		R1, [R0, #USART_CR]
-				
+                
+                ; Timer IRQ setup
+                LDR     R0, =AIC_BASE
+                LDR     R1, =IRQ_Handler
+                STR     R1, [R0, #AIC_SVR1] ; Setup SYS (01) IRQ Vector
+                
+                LDR     R0, =AIC_BASE
+                MOV     R1, #1
+                LSL     R1, #5
+                STR     R1, [R0, #AIC_SMR1]
+                
+                MOV     R1, #0x02 ; Setup mask for SYS IRQ
+                STR     R1, [R0, #AIC_IECR]
+                
+                ; Initialize timer and enable timer IRQ
+                MOV R1, #3
+                LSL R1, #24
+                LDR R0, =PIT_BASE
+                LDR R2, [R0, #PIT_MR]
+                ORR R2, R1
+                STR R2, [R0, #PIT_MR]
+                
 FOREVER
 
 ;; Включение подсветки LCD
@@ -427,5 +459,32 @@ STR_END
                 POP     {PC}
                 ENDP 
 
+                
+Timer_IRQ
+
+                PUSH {LR}
+                
+;                LDR R3, =IRQ_Cnt
+;                LDR R4, [R3]
+;                ADD R4, #1
+;                STR R4, [R3]
+
+                
+                ; Dummy read PIT to clear it's IRQ
+                LDR R0, =PIT_BASE
+                LDR R1, [R0, #PIT_PIVR]
+                
+                ; Clear interrupt in AIC
+                LDR R0, =AIC_BASE
+                MOV R1, #0x02                
+                STR R1, [R0, #AIC_ICCR]
+                STR R1, [R0, #AIC_EOICR]
+                
+                ; Clear IRQ flag in ARM7TDMI core
+                SUBS PC,R14,#4          
+                
+                POP {PC}
 
                 END
+                    
+

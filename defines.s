@@ -123,6 +123,24 @@ USART_CSR		EQU		0x0014
 USART_THR		EQU		0x001C
 USART_BRGR		EQU		0x0020
 USART_IDR		EQU		0x000C
+    
+; AIC
+
+AIC_BASE        EQU     0xFFFFF000
+AIC_SMR1        EQU     0x0004
+AIC_SVR1        EQU     0x0084
+AIC_IMR         EQU     0x0110
+AIC_IECR        EQU     0x0120
+AIC_ICCR        EQU     0x0128
+AIC_EOICR       EQU     0x0130
+    
+; PIT
+PIT_BASE        EQU     0xFFFFFD30
+PIT_MR          EQU     0x00    
+PIT_SR          EQU     0x04
+PIT_PIVR        EQU     0x08
+PIT_PIIR        EQU     0x0C
+
 
 						 
 				END
