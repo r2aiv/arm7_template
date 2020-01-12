@@ -53,7 +53,8 @@ __heap_limit
 				
 				AREA    DATA, DATA, READONLY, ALIGN=3
                 ;AREA    DATA, DATA, READWRITE, ALIGN=3
-Msg         DCB     "It fucking works! I'm so fucking happy!", 10, 13, 0
+Msg         DCB     "Hello from program body", 10, 13, 0
+IRQMsg		DCB		"Hello from IRQ", 10, 13, 0
                 PRESERVE8
 
                 ;AREA    DATA, DATA, READWRITE, ALIGN=3
@@ -110,36 +111,6 @@ FIQ_Handler     B       FIQ_Handler
 
                 EXPORT  Reset_Handler
 Reset_Handler   
-
-
-; Setup RSTC
-;                IF      RSTC_SETUP != 0
-;                LDR     R0, =RSTC_BASE
-;                LDR     R1, =RSTC_MR_Val
-;                STR     R1, [R0, #RSTC_MR]
-;                ENDIF
-
-
-; Setup EFC0
-;                IF      EFC0_SETUP != 0
-;                LDR     R0, =EFC_BASE
-;                LDR     R1, =EFC0_FMR_Val
-;                STR     R1, [R0, #EFC0_FMR]
-;                ENDIF
-
-; Setup EFC1
-;                IF      EFC1_SETUP != 0
-;                LDR     R0, =EFC_BASE
-;                LDR     R1, =EFC1_FMR_Val
-;                STR     R1, [R0, #EFC1_FMR]
-;                ENDIF
-
-; Setup WDT
-;                IF      WDT_SETUP != 0
-;                LDR     R0, =WDT_BASE
-;                LDR     R1, =WDT_MR_Val
-;                STR     R1, [R0, #WDT_MR]
-;                ENDIF
 
 
 ; Setup PMC
@@ -345,15 +316,14 @@ ENTRYPOINT
                 STR     R1, [R0, #AIC_IECR]
                 
                 ; Initialize timer and enable timer IRQ
-                MOV R1, #3
+				
+				MOV R1, #3
                 LSL R1, #24
                 LDR R0, =PIT_BASE
                 LDR R2, [R0, #PIT_MR]
                 ORR R2, R1
                 STR R2, [R0, #PIT_MR]
-				
-				
-				EOR R5, R5
+
                 
 FOREVER
 
@@ -390,7 +360,8 @@ BLINKDELAY		PROC
 				LSL R0, #8
 DELAY_1				
 				SUB R0, #1
-				MOV R1, #200
+				;MOV R1, #200
+				MOV R1, #50
 				
 DELAY_2			
 				SUB R1, #1
@@ -470,8 +441,8 @@ Timer_IRQ
 				SUB LR, LR, #4
 				STMFD SP!, {R0-R12, LR}
 				
-				;MOV R2, #'B'
-				;BL UART_SEND_CHR
+				LDR R0, =IRQMsg
+				BL UART_SEND_STR
 				
                 ; Dummy read PIT to clear it's IRQ
                 LDR R0, =PIT_BASE
