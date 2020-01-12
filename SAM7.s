@@ -53,7 +53,7 @@ __heap_limit
 				
 				AREA    DATA, DATA, READONLY, ALIGN=3
                 ;AREA    DATA, DATA, READWRITE, ALIGN=3
-Msg         DCB     " It fucking works! I'm so fucking happy! ", 10, 13, 0
+Msg         DCB     "It fucking works! I'm so fucking happy!", 10, 13, 0
                 PRESERVE8
 
                 ;AREA    DATA, DATA, READWRITE, ALIGN=3
@@ -113,33 +113,33 @@ Reset_Handler
 
 
 ; Setup RSTC
-                IF      RSTC_SETUP != 0
-                LDR     R0, =RSTC_BASE
-                LDR     R1, =RSTC_MR_Val
-                STR     R1, [R0, #RSTC_MR]
-                ENDIF
+;                IF      RSTC_SETUP != 0
+;                LDR     R0, =RSTC_BASE
+;                LDR     R1, =RSTC_MR_Val
+;                STR     R1, [R0, #RSTC_MR]
+;                ENDIF
 
 
 ; Setup EFC0
-                IF      EFC0_SETUP != 0
-                LDR     R0, =EFC_BASE
-                LDR     R1, =EFC0_FMR_Val
-                STR     R1, [R0, #EFC0_FMR]
-                ENDIF
+;                IF      EFC0_SETUP != 0
+;                LDR     R0, =EFC_BASE
+;                LDR     R1, =EFC0_FMR_Val
+;                STR     R1, [R0, #EFC0_FMR]
+;                ENDIF
 
 ; Setup EFC1
-                IF      EFC1_SETUP != 0
-                LDR     R0, =EFC_BASE
-                LDR     R1, =EFC1_FMR_Val
-                STR     R1, [R0, #EFC1_FMR]
-                ENDIF
+;                IF      EFC1_SETUP != 0
+;                LDR     R0, =EFC_BASE
+;                LDR     R1, =EFC1_FMR_Val
+;                STR     R1, [R0, #EFC1_FMR]
+;                ENDIF
 
 ; Setup WDT
-                IF      WDT_SETUP != 0
-                LDR     R0, =WDT_BASE
-                LDR     R1, =WDT_MR_Val
-                STR     R1, [R0, #WDT_MR]
-                ENDIF
+;                IF      WDT_SETUP != 0
+;                LDR     R0, =WDT_BASE
+;                LDR     R1, =WDT_MR_Val
+;                STR     R1, [R0, #WDT_MR]
+;                ENDIF
 
 
 ; Setup PMC
@@ -351,6 +351,9 @@ ENTRYPOINT
                 LDR R2, [R0, #PIT_MR]
                 ORR R2, R1
                 STR R2, [R0, #PIT_MR]
+				
+				
+				EOR R5, R5
                 
 FOREVER
 
@@ -381,7 +384,7 @@ BLINKDELAY		PROC
 	
 				PUSH {LR}
 				PUSH {R0}
-				PUSH {R1}
+				PUSH {R1}				
 		
 				MOV R0, #100	
 				LSL R0, #8
@@ -434,6 +437,7 @@ WAIT_SENT
 				POP {PC}
 				
 				ENDP
+					
 
 ; Отправка строки по UART
 ; ВХОД: R0 - адрес строки
@@ -462,14 +466,13 @@ STR_END
                 
 Timer_IRQ
 
-                PUSH {LR}
-                
-;                LDR R3, =IRQ_Cnt
-;                LDR R4, [R3]
-;                ADD R4, #1
-;                STR R4, [R3]
-
-                
+				; Save Current state to stack
+				SUB LR, LR, #4
+				STMFD SP!, {R0-R12, LR}
+				
+				;MOV R2, #'B'
+				;BL UART_SEND_CHR
+				
                 ; Dummy read PIT to clear it's IRQ
                 LDR R0, =PIT_BASE
                 LDR R1, [R0, #PIT_PIVR]
@@ -479,11 +482,11 @@ Timer_IRQ
                 MOV R1, #0x02                
                 STR R1, [R0, #AIC_ICCR]
                 STR R1, [R0, #AIC_EOICR]
+
+				; Restore state from stack and set User mode
+				LDMFD SP!,{R0-R12, PC}^
                 
-                ; Clear IRQ flag in ARM7TDMI core
-                SUBS PC,R14,#4          
-                
-                POP {PC}
+                ; POP {PC}
 
                 END
                     
