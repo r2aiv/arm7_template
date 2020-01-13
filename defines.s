@@ -11,7 +11,6 @@ Mode_SYS        EQU     0x1F
 I_Bit           EQU     0x80            ; when I bit is set, IRQ is disabled
 F_Bit           EQU     0x40            ; when F bit is set, FIQ is disabled
 
-
 ; Internal Memory Base Addresses
 FLASH_BASE      EQU     0x00100000   
 RAM_BASE        EQU     0x00200000
@@ -22,11 +21,12 @@ ABT_Stack_Size  EQU     0x00000000
 FIQ_Stack_Size  EQU     0x00000000
 IRQ_Stack_Size  EQU     0x00000080
 USR_Stack_Size  EQU     0x00000400
-
+    
 ISR_Stack_Size  EQU     (UND_Stack_Size + SVC_Stack_Size + ABT_Stack_Size + \
                          FIQ_Stack_Size + IRQ_Stack_Size)
 					
 Heap_Size       EQU     0x00000000
+    
 	
 	
 ; Reset Controller (RSTC) definitions

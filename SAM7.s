@@ -23,8 +23,7 @@
 ; *  from on-chip Flash to on-chip RAM.
 ; */
 
-
-				GET defines.s
+                GET util.s
 				
                 AREA    STACK, NOINIT, READWRITE, ALIGN=3
 
@@ -55,6 +54,14 @@ __heap_limit
                 ;AREA    DATA, DATA, READWRITE, ALIGN=3
 Msg         DCB     "Hello from program body", 10, 13, 0
 IRQMsg		DCB		"Hello from IRQ", 10, 13, 0
+CRLF        DCB     10, 13, 0
+                PRESERVE8
+                    
+                AREA    Var, DATA, READWRITE, ALIGN=3
+CommonCounter   DCB     0
+Task1Counter    DCB     0
+Task2Counter    DCB     0
+Task3Counter    DCB     0
                 PRESERVE8
 
                 ;AREA    DATA, DATA, READWRITE, ALIGN=3
@@ -320,7 +327,9 @@ ENTRYPOINT
 				MOV R1, #3
                 LSL R1, #24
                 LDR R0, =PIT_BASE
-                LDR R2, [R0, #PIT_MR]
+                ;LDR R2, [R0, #PIT_MR]
+                MOV R2, #1
+                LSL R2, #16
                 ORR R2, R1
                 STR R2, [R0, #PIT_MR]
 
@@ -350,100 +359,24 @@ FOREVER
 
 				B FOREVER
 				
-BLINKDELAY		PROC
-	
-				PUSH {LR}
-				PUSH {R0}
-				PUSH {R1}				
-		
-				MOV R0, #100	
-				LSL R0, #8
-DELAY_1				
-				SUB R0, #1
-				;MOV R1, #200
-				MOV R1, #50
-				
-DELAY_2			
-				SUB R1, #1
-				CMP R1, #0
-				BNE DELAY_2
-				
-				CMP R0,#0
-				BNE DELAY_1
-				
-				POP {R1}
-				POP {R0}
-				POP {PC}
-	
-				ENDP
-	
-; Отправка символа по UART
-; ВХОД: R2 - отправляемый символ
-UART_SEND_CHR	PROC
-				
-				PUSH {LR}
-				PUSH {R0}
-				PUSH {R1}
-				PUSH {R2}
-				
-				LDR R0, =USART0_BASE
-				MOV R1, R2
-				STR R1, [R0, #USART_THR]
-				
-; Дожидаемся окончания отправки
-
-WAIT_SENT
-				EOR R0, R0
-				ADD R0, #USART0_BASE
-				ADD R0, #USART_CSR
-				LDR R1, [R0]
-				MOV R2, #1
-				LSL R2, #9
-				TST R1, R2 ; бит "передача завершена"
-				BEQ WAIT_SENT
-				
-				POP {R2}
-				POP {R1}
-				POP {R0}
-				POP {PC}
-				
-				ENDP
-					
-
-; Отправка строки по UART
-; ВХОД: R0 - адрес строки
-UART_SEND_STR	PROC
-
-                PUSH    {LR}
-                PUSH    {R0}
-                PUSH    {R1}
-				PUSH    {R2}
-				
-				
-NEXT_CHR
-				LDRB 	R2, [R0]
-				CMP 	R2, #0
-				BEQ 	STR_END
-				BL 		UART_SEND_CHR
-				ADD 	R0, #1
-				B 		NEXT_CHR						
-STR_END
-				POP     {R2}
-                POP     {R1}
-                POP     {R0}
-                POP     {PC}
-                ENDP 
-
                 
 Timer_IRQ
 
 				; Save Current state to stack
 				SUB LR, LR, #4
 				STMFD SP!, {R0-R12, LR}
-				
-				LDR R0, =IRQMsg
+				                
+                LDR R0, =CommonCounter
+                LDR R1, [R0]
+                ADD R1, #1
+                STR R1, [R0]
+                
+                MOV R2, R1
+                BL WRITE_BYTE_HEX
+                
+                LDR R0, =CRLF
 				BL UART_SEND_STR
-				
+                
                 ; Dummy read PIT to clear it's IRQ
                 LDR R0, =PIT_BASE
                 LDR R1, [R0, #PIT_PIVR]
@@ -457,8 +390,6 @@ Timer_IRQ
 				; Restore state from stack and set User mode
 				LDMFD SP!,{R0-R12, PC}^
                 
-                ; POP {PC}
-
                 END
                     
 
