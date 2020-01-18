@@ -1,0 +1,9 @@
+Dependencies for Project 'Shed', Target 'Shed': (DO NOT MODIFY !)
+F (.\SAM7.s)(0x5E230E88)(--cpu ARM7TDMI -g --apcs=interwork -ID:\Keil_v5\ARM\RV31\INC-ID:\Keil_v5\ARM\CMSIS\Include-ID:\Keil_v5\ARM\INC\Atmel\SAM7X--pd "__UVISION_VERSION SETA 524"--list .\listings\sam7.lst --xref -o .\objects\sam7.o --depend .\objects\sam7.d)
+I (util.s)(0x5E23020A)
+I (defines.s)(0x5E22E9B6)
+F (.\defines.s)(0x5E22E9B6)(--cpu ARM7TDMI -g --apcs=interwork -ID:\Keil_v5\ARM\RV31\INC-ID:\Keil_v5\ARM\CMSIS\Include-ID:\Keil_v5\ARM\INC\Atmel\SAM7X--pd "__UVISION_VERSION SETA 524"--list .\listings\defines.lst --xref -o .\objects\defines.o --depend .\objects\defines.d)
+F (.\main.c)(0x5E22E9B6)(--c99 -c --cpu ARM7TDMI -g -O0 --apcs=interwork --split_sections-ID:\Keil_v5\ARM\RV31\INC-ID:\Keil_v5\ARM\CMSIS\Include-ID:\Keil_v5\ARM\INC\Atmel\SAM7X-D__UVISION_VERSION="524"-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
+I (D:\Keil_v5\ARM\INC\Atmel\SAM7X\at91sam7x256.h)(0x559D213A)
+F (.\util.s)(0x5E23020A)(--cpu ARM7TDMI -g --apcs=interwork -ID:\Keil_v5\ARM\RV31\INC-ID:\Keil_v5\ARM\CMSIS\Include-ID:\Keil_v5\ARM\INC\Atmel\SAM7X--pd "__UVISION_VERSION SETA 524"--list .\listings\util.lst --xref -o .\objects\util.o --depend .\objects\util.d)
+I (defines.s)(0x5E22E9B6)

@@ -32,13 +32,13 @@ __initial_sp    SPACE   ISR_Stack_Size
 Stack_Top
 
 Task1_Stack_Mem	SPACE	0x00000100
-Tasl1_Stack_Top
+Task1_Stack_Top
 
 Task2_Stack_Mem	SPACE	0x00000100
-Tasl2_Stack_Top
+Task2_Stack_Top
 
 Task3_Stack_Mem	SPACE	0x00000100
-Tasl3_Stack_Top
+Task3_Stack_Top
 
 
                 AREA    HEAP, NOINIT, READWRITE, ALIGN=3
@@ -52,21 +52,34 @@ __heap_limit
 				
 				AREA    DATA, DATA, READONLY, ALIGN=3
                 ;AREA    DATA, DATA, READWRITE, ALIGN=3
-Msg         DCB     "Hello from program body", 10, 13, 0
-IRQMsg		DCB		"Hello from IRQ", 10, 13, 0
-CRLF        DCB     10, 13, 0
+Msg         	DCB     "Hello from program body", 10, 13, 0
+IRQMsg			DCB		"Hello from IRQ", 10, 13, 0
+CRLF        	DCB     10, 13, 0
+
+Task1Msg		DCB		"TASK1: ", 0
+Task2Msg		DCB		"TASK2: ", 0
+Task3Msg		DCB		"TASK3: ", 0
+TaskCntrMsg		DCB		"Task own counter: ", 0
+CommonCntrMsg	DCB		"Common task counter: ", 0
+
+ShedMsg			DCB		"Next task: ", 0
                 PRESERVE8
                     
                 AREA    Var, DATA, READWRITE, ALIGN=3
-CommonCounter   DCB     0
-Task1Counter    DCB     0
-Task2Counter    DCB     0
-Task3Counter    DCB     0
-                PRESERVE8
+CommonCounter   DCQ     0
+Task1Counter    DCQ     0
+Task2Counter    DCQ     0
+Task3Counter    DCQ     0
+NextTaskNumber	DCQ		1
+;Dummy1			DCB		0
+;Dummy2			DCB		0
+;Dummy3			DCB		0
 
-                ;AREA    DATA, DATA, READWRITE, ALIGN=3
-;IRQ_Cnt     DCB     123
-;                PRESERVE8
+Task1SP			DCQ		0
+Task2SP			DCQ		0
+Task3SP			DCQ		0
+SystemSP		DCQ		0
+                PRESERVE8
 
 
 ; Area Definition and Entry Point
@@ -246,7 +259,6 @@ MC_RCR  EQU     0x00            ; MC_RCR Offset
 				
 ENTRYPOINT      
 
-
 ; Включение тактирования PIOA
 				LDR		R0, =PMC_BASE
 				MOV 	R1, #1
@@ -259,7 +271,7 @@ ENTRYPOINT
 				LSL		R1, #3
                 STR     R1, [R0, #PMC_PCER]
 
-; PA0 - USART0_RX, PA1 - USART0_TX
+; Настройка мультиплекчирования выводов PIOA.1 для работы с USART0
 				LDR 	R0, =PIOA_BASE
 				MOV 	R1, #3				
 				STR		R1, [R0, #PIO_ASR]
@@ -268,13 +280,13 @@ ENTRYPOINT
 				STR		R1, [R0, #PIO_IFDR]
 				STR		R1, [R0, #PIO_CODR]
 				
-; Включение PB20 на выход
+; Включение PB20 на выход (подсветка LCD)
 				LDR R0, =PIOB_BASE
 				MOV R1, #1
 				LSL R1, #20
 				STR R1, [R0, #PIO_OER]
 				
-; Тактирование USART0
+; Включение тактирования USART0
 				LDR     R0, =PMC_BASE
                 MOV     R1, #1
 				LSL		R1, #6
@@ -283,14 +295,17 @@ ENTRYPOINT
 
 ; Настройка USART0
 
+				; Сброс контроллера UART
 				LDR		R0, =USART0_BASE
-				MOV 	R1, #0xAC ; Сброс и запрет
+				MOV 	R1, #0xAC 
 				STR		R1, [R0, #USART_CR]
 
+				; Запрещение выдачи прерываний
 				LDR		R0, =USART0_BASE
 				MOV     R1, #0xFFFFFFFF
 				STR 	R1, [R0, #USART_IDR]
-
+				
+				; Режим работы: 8 бит, 1 стоповый бит, без бита четности
 				LDR		R0, =USART0_BASE
 				MOV 	R1, #3
 				LSL		R1, #6
@@ -299,7 +314,7 @@ ENTRYPOINT
 				ORR 	R1, R2
 				STR		R1, [R0, #USART_MR]
 				
-				; 115200
+				; Скорость работы: 115200 бод
 				LDR 	R0, =USART0_BASE
 				MOV 	R1, #26				
 				STR 	R1, [R0, #USART_BRGR]
@@ -309,34 +324,46 @@ ENTRYPOINT
 				LSL 	R1, #4
 				STR		R1, [R0, #USART_CR]
                 
-                ; Timer IRQ setup
+                ; Настройка прерывания от системного таймера PIT
+				; Через AIC-контроллер прерывание подключается ко входу IRQ ядра
+				; В регистр вектора прерывания AIC записывается адрес обработчика
+				; прерывания таймера
+				; У AT91SAM7X256 прерывание таймера считается системным
+				; в AIC под системное прерывание выделен номер 1
+				
                 LDR     R0, =AIC_BASE
                 LDR     R1, =IRQ_Handler
-                STR     R1, [R0, #AIC_SVR1] ; Setup SYS (01) IRQ Vector
+                STR     R1, [R0, #AIC_SVR1] 
                 
+				; Установка режима реакции входа прерывания
+				; по восходящему фронту сигнала (бит 5)
                 LDR     R0, =AIC_BASE
                 MOV     R1, #1
                 LSL     R1, #5
                 STR     R1, [R0, #AIC_SMR1]
                 
-                MOV     R1, #0x02 ; Setup mask for SYS IRQ
+				; Разрешение системного прерывания в AIC
+                MOV     R1, #0x02
                 STR     R1, [R0, #AIC_IECR]
                 
-                ; Initialize timer and enable timer IRQ
-				
+                ; Инициализация таймера и разрешения выдачи прерывания в AIC
 				MOV R1, #3
                 LSL R1, #24
                 LDR R0, =PIT_BASE
-                ;LDR R2, [R0, #PIT_MR]
+				
+                ; Интервал перезагрузки таймера: 0x010000 (65536)
+				; Итого частота возникновения прерывания равна: 
+				; 95.8464 МГц/65536 = 1.762 кГц
                 MOV R2, #1
-                LSL R2, #16
+                LSL R2, #16				
                 ORR R2, R1
                 STR R2, [R0, #PIT_MR]
+				
 
-                
+; Бесконечный цикл - просто мигаем подсветкой LCD и выводим сообщение
 FOREVER
 
-;; Включение подсветки LCD
+; Включение подсветки LCD
 				LDR R0, =PIOB_BASE
 				MOV R1, #1
 				LSL R1, #20
@@ -344,39 +371,203 @@ FOREVER
 												
 				BL BLINKDELAY
 				
-;; Выключение подсветки LCD
+; Выключение подсветки LCD
 				LDR R0, =PIOB_BASE
 				MOV R1, #1
 				LSL R1, #20
 				STR R1, [R0, #PIO_CODR]
 				
-				;MOV R2, #'A'
-				;BL UART_SEND_CHR
 				LDR R0, =Msg
-				BL UART_SEND_STR
-				
+				BL UART_SEND_STR				
 				BL BLINKDELAY
-
 				B FOREVER
 				
-                
-Timer_IRQ
-
-				; Save Current state to stack
-				SUB LR, LR, #4
-				STMFD SP!, {R0-R12, LR}
-				                
-                LDR R0, =CommonCounter
+Task1_Proc		PROC
+				PUSH {LR}
+				PUSH {R0}
+				PUSH {R1}
+				
+				BL DisablePIT
+								
+				; Output state to UART
+				LDR R0, =Task1Msg
+				BL UART_SEND_STR
+				
+				MOV R2, #' '
+				BL UART_SEND_CHR
+				
+				LDR R0, =CommonCntrMsg
+				BL UART_SEND_STR
+				
+				LDR R0, =CommonCounter
                 LDR R1, [R0]
-                ADD R1, #1
-                STR R1, [R0]
-                
+                MOV R2, R1
+                BL WRITE_BYTE_HEX
+				
+				MOV R2, #' '
+				BL UART_SEND_CHR
+				
+				LDR R0, =TaskCntrMsg
+				BL UART_SEND_STR
+				
+				LDR R0, =Task1Counter
+                LDR R1, [R0]
                 MOV R2, R1
                 BL WRITE_BYTE_HEX
                 
                 LDR R0, =CRLF
 				BL UART_SEND_STR
+
+				; Increment counters
+				LDR R0, =CommonCounter
+				LDR R1, [R0]
+				ADD R1, #1
+				STR R1, [R0]
+				
+				LDR R0, =Task1Counter
+				LDR R1, [R0]
+				ADD R1, #1
+				STR R1, [R0]
+				
+				BL EnablePIT
+				
+				POP {R1}
+				POP {R0}
+				POP {PC}
+				ENDP
+					
+Task2_Proc		PROC	
+	
+				PUSH {LR}
+				PUSH {R0}
+				PUSH {R1}
+				
+				BL DisablePIT
+	
+				; Output state to UART
+				LDR R0, =Task2Msg
+				BL UART_SEND_STR
+				
+				MOV R2, #' '
+				BL UART_SEND_CHR
+				
+				LDR R0, =CommonCntrMsg
+				BL UART_SEND_STR
+				
+				LDR R0, =CommonCounter
+                LDR R1, [R0]
+                MOV R2, R1
+                BL WRITE_BYTE_HEX
+				
+				MOV R2, #' '
+				BL UART_SEND_CHR
+				
+				LDR R0, =TaskCntrMsg
+				BL UART_SEND_STR
+				
+				LDR R0, =Task2Counter
+                LDR R1, [R0]
+                MOV R2, R1
+                BL WRITE_BYTE_HEX
                 
+                LDR R0, =CRLF
+				BL UART_SEND_STR
+
+				; Increment counters
+				LDR R0, =CommonCounter
+				LDR R1, [R0]
+				ADD R1, #1
+				STR R1, [R0]
+				
+				LDR R0, =Task2Counter
+				LDR R1, [R0]
+				ADD R1, #1
+				STR R1, [R0]				
+				BL EnablePIT
+				
+				POP {R1}
+				POP {R0}
+				POP {PC}
+				
+				ENDP					
+           
+Task3_Proc		PROC	
+	
+				PUSH {LR}
+				PUSH {R0}
+				PUSH {R1}
+				
+				BL DisablePIT
+	
+				; Output state to UART
+				LDR R0, =Task3Msg
+				BL UART_SEND_STR
+				
+				MOV R2, #' '
+				BL UART_SEND_CHR
+				
+				LDR R0, =CommonCntrMsg
+				BL UART_SEND_STR
+				
+				LDR R0, =CommonCounter
+                LDR R1, [R0]
+                MOV R2, R1
+                BL WRITE_BYTE_HEX
+				
+				MOV R2, #' '
+				BL UART_SEND_CHR
+				
+				LDR R0, =TaskCntrMsg
+				BL UART_SEND_STR
+				
+				LDR R0, =Task3Counter
+                LDR R1, [R0]
+                MOV R2, R1
+                BL WRITE_BYTE_HEX
+                
+                LDR R0, =CRLF
+				BL UART_SEND_STR
+
+				; Increment counters
+				LDR R0, =CommonCounter
+				LDR R1, [R0]
+				ADD R1, #1
+				STR R1, [R0]
+				
+				LDR R0, =Task3Counter
+				LDR R1, [R0]
+				ADD R1, #1
+				STR R1, [R0]
+				
+				BL EnablePIT
+
+				POP {R1}
+				POP {R0}
+				POP {PC}
+				ENDP
+
+Timer_IRQ
+
+				; Save Current state to stack
+				
+				SUB LR, LR, #4
+				STMFD SP!, {R0-R12, LR}
+				                
+				; Print and update next task number
+				LDR R0, =NextTaskNumber
+				LDR R1, [R0]
+				CMP R1, #3
+				MOVEQ R1, #0
+				ADD R1, #1
+				STR R1, [R0]
+				
+				CMP R1, #1
+				BLEQ Task1_Proc
+				CMP R1, #2
+				BLEQ Task2_Proc
+				CMP R1, #3
+				BLEQ Task3_Proc
+				
                 ; Dummy read PIT to clear it's IRQ
                 LDR R0, =PIT_BASE
                 LDR R1, [R0, #PIT_PIVR]
@@ -386,7 +577,7 @@ Timer_IRQ
                 MOV R1, #0x02                
                 STR R1, [R0, #AIC_ICCR]
                 STR R1, [R0, #AIC_EOICR]
-
+				
 				; Restore state from stack and set User mode
 				LDMFD SP!,{R0-R12, PC}^
                 

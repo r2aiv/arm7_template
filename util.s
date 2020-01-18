@@ -127,5 +127,55 @@ WRITE_BYTE_HEX
                 POP {R1}
                 POP {PC}
             
-        END
+DisablePIT		PROC
+	
+				PUSH {LR}	
+				PUSH {R0}
+				PUSH {R1}
+				PUSH {R2}
+				
+				; Disable timer interrupt				
+                LDR R0, =PIT_BASE
+				; Clear PITIEN bit
+				MOV R1, #1
+				LSL R1, #25
+				
+				; Load to R2 PIT_MR state
+				LDR R2, [R0, #PIT_MR]
+				BIC R2, R1
+				STR R2, [R0, #PIT_MR]
+				
+				POP {R2}
+				POP {R1}
+				POP {R0}
+				POP {PC}
+	
+				ENDP
+					
+EnablePIT		PROC
+	
+				PUSH {LR}	
+				PUSH {R0}
+				PUSH {R1}
+				PUSH {R2}
+				
+				; Disable timer interrupt				
+                LDR R0, =PIT_BASE
+				; Clear PITIEN bit
+				MOV R1, #1
+				LSL R1, #25
+				
+				; Load to R2 PIT_MR state
+				LDR R2, [R0, #PIT_MR]
+				ORR R2, R1
+				STR R2, [R0, #PIT_MR]
+				
+				POP {R2}
+				POP {R1}
+				POP {R0}
+				POP {PC}
+	
+				ENDP
+					
+				END
             
