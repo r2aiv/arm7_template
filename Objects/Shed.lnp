@@ -1,9 +1,0 @@
---cpu ARM7TDMI
-".\objects\sam7.o"
-".\objects\defines.o"
-".\objects\main.o"
-".\objects\util.o"
---strict --scatter ".\Objects\Shed.sct"
---summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
---info sizes --info totals --info unused --info veneers
---list ".\Listings\Shed.map" -o .\Objects\Shed.axf

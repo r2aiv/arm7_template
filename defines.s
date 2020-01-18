@@ -1,4 +1,5 @@
-; Standard definitions of Mode bits and Interrupt (I & F) flags in PSRs
+; Файл с определением констант режимов работы процессора,
+; прерываний, областей памяти и регистров периферийных устройств
 
 Mode_USR        EQU     0x10
 Mode_FIQ        EQU     0x11
@@ -8,10 +9,10 @@ Mode_ABT        EQU     0x17
 Mode_UND        EQU     0x1B
 Mode_SYS        EQU     0x1F
 
-I_Bit           EQU     0x80            ; when I bit is set, IRQ is disabled
-F_Bit           EQU     0x40            ; when F bit is set, FIQ is disabled
+I_Bit           EQU     0x80
+F_Bit           EQU     0x40
 
-; Internal Memory Base Addresses
+; Базовые адреса встроенной памяти
 FLASH_BASE      EQU     0x00100000   
 RAM_BASE        EQU     0x00200000
 
@@ -29,7 +30,7 @@ Heap_Size       EQU     0x00000000
     
 	
 	
-; Reset Controller (RSTC) definitions
+; Регистры контроллера сброса RSTC
 RSTC_BASE       EQU     0xFFFFFD00      ; RSTC Base Address
 RSTC_MR         EQU     0x08            ; RSTC_MR Offset
 	
@@ -38,7 +39,7 @@ RSTC_SETUP      EQU     1
 RSTC_MR_Val     EQU     0xA5000401
 
 
-; Embedded Flash Controller (EFC) definitions
+; Регистры контроллера флеш-памяти EFC
 EFC_BASE        EQU     0xFFFFFF00      ; EFC Base Address
 EFC0_FMR        EQU     0x60            ; EFC0_FMR Offset
 EFC1_FMR        EQU     0x70            ; EFC1_FMR Offset
@@ -50,13 +51,13 @@ EFC1_SETUP      EQU     0
 EFC1_FMR_Val    EQU     0x00320100
 
 
-; Watchdog Timer (WDT) definitions
+; Регистры сторожевого таймера WDT
 WDT_BASE        EQU     0xFFFFFD40      ; WDT Base Address
 WDT_MR          EQU     0x04            ; WDT_MR Offset
 WDT_SETUP       EQU     1
 WDT_MR_Val      EQU     0x00008000
 
-; Power Mangement Controller (PMC) definitions
+; Регистры контроллера управления питанием и тактированием
 PMC_BASE        EQU     0xFFFFFC00      ; PMC Base Address
 PMC_PCER		EQU		0x10
 PMC_MOR         EQU     0x20            ; PMC_MOR Offset
@@ -101,7 +102,6 @@ PIO_ASR			EQU		0x0070
 PIO_BSR			EQU		0x0074
 	
 ; Отладочный UART
-
 DBGU_CR			EQU		0x00000000
 DBGU_MR			EQU		0x00000004
 DBGU_CSR		EQU		0x00000014
@@ -110,12 +110,10 @@ DBGU_IDR		EQU		0x0000000C
 DBGU_BRGR		EQU		0x00000020
 	
 ; DMA для отладочного UART'a
-
 DBGU_PDC_BASE	EQU		0xFFFFF300
 DBGU_PDC_PTCR	EQU		0x00000020
 	
 ; USART0
-
 USART0_BASE 	EQU		0xFFFC0000
 USART_CR		EQU		0x0000
 USART_MR		EQU		0x0004
@@ -125,7 +123,6 @@ USART_BRGR		EQU		0x0020
 USART_IDR		EQU		0x000C
     
 ; AIC
-
 AIC_BASE        EQU     0xFFFFF000
 AIC_SMR1        EQU     0x0004
 AIC_SVR1        EQU     0x0084
@@ -140,7 +137,5 @@ PIT_MR          EQU     0x00
 PIT_SR          EQU     0x04
 PIT_PIVR        EQU     0x08
 PIT_PIIR        EQU     0x0C
-
-
-						 
+					 
 				END

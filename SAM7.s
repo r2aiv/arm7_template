@@ -1,57 +1,16 @@
-;/*****************************************************************************/
-;/* SAM7.S: Startup file for Atmel AT91SAM7 device series                     */
-;/*****************************************************************************/
-;/* <<< Use Configuration Wizard in Context Menu >>>                          */ 
-;/*****************************************************************************/
-;/* This file is part of the uVision/ARM development tools.                   */
-;/* Copyright (c) 2005-2006 Keil Software. All rights reserved.               */
-;/* This software may only be used under the terms of a valid, current,       */
-;/* end user licence from KEIL for a compatible version of KEIL software      */
-;/* development tools. Nothing else gives you the right to use this software. */
-;/*****************************************************************************/
-
-
-;/*
-; *  The SAM7.S code is executed after CPU Reset. This file may be 
-; *  translated with the following SET symbols. In uVision these SET 
-; *  symbols are entered under Options - ASM - Define.
-; *
-; *  REMAP: when set the startup code remaps exception vectors from
-; *  on-chip RAM to address 0.
-; *
-; *  RAM_INTVEC: when set the startup code copies exception vectors 
-; *  from on-chip Flash to on-chip RAM.
-; */
-
                 GET util.s
-				
+
+; Инициализация стека
                 AREA    STACK, NOINIT, READWRITE, ALIGN=3
 
 Stack_Mem       SPACE   USR_Stack_Size
 __initial_sp    SPACE   ISR_Stack_Size
 Stack_Top
 
-Task1_Stack_Mem	SPACE	0x00000100
-Task1_Stack_Top
-
-Task2_Stack_Mem	SPACE	0x00000100
-Task2_Stack_Top
-
-Task3_Stack_Mem	SPACE	0x00000100
-Task3_Stack_Top
-
-
-                AREA    HEAP, NOINIT, READWRITE, ALIGN=3
-__heap_base
-Heap_Mem        SPACE   Heap_Size
-__heap_limit
-
-
                 PRESERVE8
                 
-				
-				AREA    DATA, DATA, READONLY, ALIGN=3
-                ;AREA    DATA, DATA, READWRITE, ALIGN=3
+; Инициализация переменных только для чтения				
+				AREA    DATA, DATA, READONLY, ALIGN=3                
 Msg         	DCB     "Hello from program body", 10, 13, 0
 IRQMsg			DCB		"Hello from IRQ", 10, 13, 0
 CRLF        	DCB     10, 13, 0
@@ -62,37 +21,26 @@ Task3Msg		DCB		"TASK3: ", 0
 TaskCntrMsg		DCB		"Task own counter: ", 0
 CommonCntrMsg	DCB		"Common task counter: ", 0
 
-ShedMsg			DCB		"Next task: ", 0
                 PRESERVE8
                     
+; Инициализация переменных для чтения и записи
                 AREA    Var, DATA, READWRITE, ALIGN=3
 CommonCounter   DCQ     0
 Task1Counter    DCQ     0
 Task2Counter    DCQ     0
 Task3Counter    DCQ     0
 NextTaskNumber	DCQ		1
-;Dummy1			DCB		0
-;Dummy2			DCB		0
-;Dummy3			DCB		0
-
-Task1SP			DCQ		0
-Task2SP			DCQ		0
-Task3SP			DCQ		0
-SystemSP		DCQ		0
                 PRESERVE8
 
 
-; Area Definition and Entry Point
-;  Startup Code must be linked first at Address at which it expects to run.
+; Точка входа в программу. 
 
                 AREA    RESET, CODE, READONLY
                 ARM
 
 
-; Exception Vectors
-;  Mapped to Address 0.
-;  Absolute addressing mode must be used.
-;  Dummy Handlers are implemented as infinite loops which can be modified.
+; Векторы прерываний и исключений
+; Неиспользованные векторы загрушены в виде бесконечных циклов
 
 Vectors         LDR     PC,Reset_Addr         
                 LDR     PC,Undef_Addr
@@ -119,47 +67,46 @@ SWI_Handler     B       SWI_Handler
 PAbt_Handler    B       PAbt_Handler
 DAbt_Handler    B       DAbt_Handler
 
-
-IRQ_Handler     
-                B       Timer_IRQ
+; Вектор прерывания системного таймера
+IRQ_Handler     B       Timer_IRQ
 
 
 FIQ_Handler     B       FIQ_Handler
 
 
-; Reset Handler
+; Вектор прерывания по сбросу (по сути - точка входа в программу)
 
                 EXPORT  Reset_Handler
 Reset_Handler   
 
 
-; Setup PMC
+; Настройка тактирования
                 IF      PMC_SETUP != 0
                 LDR     R0, =PMC_BASE
 
-;  Setup Main Oscillator
+; Установка основного тактового генератора
                 LDR     R1, =PMC_MOR_Val
                 STR     R1, [R0, #PMC_MOR]
 
-;  Wait until Main Oscillator is stablilized
+; Ждем, пока тактовый генератор стабилизируется
                 IF      (PMC_MOR_Val:AND:PMC_MOSCEN) != 0
 MOSCS_Loop      LDR     R2, [R0, #PMC_SR]
                 ANDS    R2, R2, #PMC_MOSCS
                 BEQ     MOSCS_Loop
                 ENDIF
 
-;  Setup the PLL
+; Настройка ФАПЧ (частота - 95.8464 МГц)
                 IF      (PMC_PLLR_Val:AND:PMC_MUL) != 0
                 LDR     R1, =PMC_PLLR_Val
                 STR     R1, [R0, #PMC_PLLR]
 
-;  Wait until PLL is stabilized
+; Ждем, пока ФАПЧ стабилизируется
 PLL_Loop        LDR     R2, [R0, #PMC_SR]
                 ANDS    R2, R2, #PMC_LOCK
                 BEQ     PLL_Loop
                 ENDIF
 
-;  Select Clock
+; Настройка тактирования
                 IF      (PMC_MCKR_Val:AND:PMC_CSS) == 1     ; Main Clock Selected
                 LDR     R1, =PMC_MCKR_Val
                 AND     R1, #PMC_CSS
@@ -188,19 +135,19 @@ WAIT_Rdy2       LDR     R2, [R0, #PMC_SR]
                 ENDIF   ; PMC_SETUP
 
 
-; Copy Exception Vectors to Internal RAM
+; Копирование веторов прерывания/исключений во внутреннюю СОЗУ
 
                 IF      :DEF:RAM_INTVEC
-                ADR     R8, Vectors         ; Source
-                LDR     R9, =RAM_BASE       ; Destination
-                LDMIA   R8!, {R0-R7}        ; Load Vectors 
-                STMIA   R9!, {R0-R7}        ; Store Vectors 
-                LDMIA   R8!, {R0-R7}        ; Load Handler Addresses 
-                STMIA   R9!, {R0-R7}        ; Store Handler Addresses
+                ADR     R8, Vectors         ; Источник
+                LDR     R9, =RAM_BASE       ; Приемник
+                LDMIA   R8!, {R0-R7}        ; Загрузка векторов
+                STMIA   R9!, {R0-R7}        ; Сохранение векторов
+                LDMIA   R8!, {R0-R7}        ; Загрузка обработчиков
+                STMIA   R9!, {R0-R7}        ; Сохранение обработчиков
                 ENDIF
 
 
-; Remap on-chip RAM to address 0
+; Встроенная СОЗУ отображается на адрес 0
 
 MC_BASE EQU     0xFFFFFF00      ; MC Base Address
 MC_RCR  EQU     0x00            ; MC_RCR Offset
@@ -212,36 +159,36 @@ MC_RCR  EQU     0x00            ; MC_RCR Offset
                 ENDIF
 
 
-; Setup Stack for each mode
+; Установка стеков для всех режимов процессора
 
                 LDR     R0, =Stack_Top
 
-;  Enter Undefined Instruction Mode and set its Stack Pointer
+;  Вход в режим "недопустимая инструкция" и установка его указателя стека
                 MSR     CPSR_c, #Mode_UND:OR:I_Bit:OR:F_Bit
                 MOV     SP, R0
                 SUB     R0, R0, #UND_Stack_Size
 
-;  Enter Abort Mode and set its Stack Pointer
+;  То же, для режима Abort
                 MSR     CPSR_c, #Mode_ABT:OR:I_Bit:OR:F_Bit
                 MOV     SP, R0
                 SUB     R0, R0, #ABT_Stack_Size
 
-;  Enter FIQ Mode and set its Stack Pointer
+;  То же, для режима работы в прерывании FIQ
                 MSR     CPSR_c, #Mode_FIQ:OR:I_Bit:OR:F_Bit
                 MOV     SP, R0
                 SUB     R0, R0, #FIQ_Stack_Size
 
-;  Enter IRQ Mode and set its Stack Pointer
+;  То же, для режима работы в прерывании IRQ
                 MSR     CPSR_c, #Mode_IRQ:OR:I_Bit:OR:F_Bit
                 MOV     SP, R0
                 SUB     R0, R0, #IRQ_Stack_Size
 
-;  Enter Supervisor Mode and set its Stack Pointer
+;  То же, для режима Supervisor
                 MSR     CPSR_c, #Mode_SVC:OR:I_Bit:OR:F_Bit
                 MOV     SP, R0
                 SUB     R0, R0, #SVC_Stack_Size
 
-;  Enter User Mode and set its Stack Pointer
+;  То же, для режима выполнения программы пользователя
                 MSR     CPSR_c, #Mode_USR
                 IF      :DEF:__MICROLIB
 
@@ -255,7 +202,7 @@ MC_RCR  EQU     0x00            ; MC_RCR Offset
                 ENDIF
 
 
-; ----------------------ТОЧКА ВХОДА ЗДЕСЬ!!!-----------------------
+; ----------------------НАЧАЛА РАБОЧЕГО КОДА--------------------------
 				
 ENTRYPOINT      
 
@@ -359,6 +306,9 @@ ENTRYPOINT
                 ORR R2, R1
                 STR R2, [R0, #PIT_MR]
 				
+				;LDR R0, =NextTaskNumber
+				;MOV R1, #1
+				;STR R1, [R0]
 
 ; Бесконечный цикл - просто мигаем подсветкой LCD и выводим сообщение
 FOREVER
@@ -552,21 +502,6 @@ Timer_IRQ
 				
 				SUB LR, LR, #4
 				STMFD SP!, {R0-R12, LR}
-				                
-				; Print and update next task number
-				LDR R0, =NextTaskNumber
-				LDR R1, [R0]
-				CMP R1, #3
-				MOVEQ R1, #0
-				ADD R1, #1
-				STR R1, [R0]
-				
-				CMP R1, #1
-				BLEQ Task1_Proc
-				CMP R1, #2
-				BLEQ Task2_Proc
-				CMP R1, #3
-				BLEQ Task3_Proc
 				
                 ; Dummy read PIT to clear it's IRQ
                 LDR R0, =PIT_BASE
@@ -577,6 +512,31 @@ Timer_IRQ
                 MOV R1, #0x02                
                 STR R1, [R0, #AIC_ICCR]
                 STR R1, [R0, #AIC_EOICR]
+				                
+				; Print and update next task number
+				LDR R0, =NextTaskNumber
+				LDR R1, [R0]
+				CMP R1, #3				
+				MOVHI R1, #0
+				ADD R1, #1
+				STR R1, [R0]
+				
+				CMP R1, #1
+				BLEQ Task1_Proc
+				CMP R1, #2;
+				BLEQ Task2_Proc
+				CMP R1, #3
+				BLEQ Task3_Proc
+				
+                ; Dummy read PIT to clear it's IRQ
+ ;               LDR R0, =PIT_BASE
+ ;               LDR R1, [R0, #PIT_PIVR]
+                
+                ; Clear interrupt in AIC
+ ;               LDR R0, =AIC_BASE
+ ;               MOV R1, #0x02                
+ ;               STR R1, [R0, #AIC_ICCR]
+ ;               STR R1, [R0, #AIC_EOICR]
 				
 				; Restore state from stack and set User mode
 				LDMFD SP!,{R0-R12, PC}^

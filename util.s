@@ -1,17 +1,21 @@
-                GET defines.s
+; Подпрограммы, вызываемые из основной программы
+
+				GET defines.s
                 AREA Util, CODE, READONLY, ALIGN=3
             
+; Задержка для мигания подсветкой LCD
+; ВХОД - входные параметры отсутсвуют
+; ВЫХОД - подпрограмма ничего не возвращает
 BLINKDELAY		PROC
 	
 				PUSH {LR}
 				PUSH {R0}
 				PUSH {R1}				
 		
-				MOV R0, #100	
+				MOV R0, #50
 				LSL R0, #8
 DELAY_1				
-				SUB R0, #1
-				;MOV R1, #200
+				SUB R0, #1				
 				MOV R1, #50
 				
 DELAY_2			
@@ -29,7 +33,8 @@ DELAY_2
 				ENDP
 	
 ; Отправка символа по UART
-; ВХОД: R2 - отправляемый символ
+; ВХОД - R2 - отправляемый символ
+; ВЫХОД - подпрограмма ничего не возвращает
 UART_SEND_CHR	PROC
 				
 				PUSH {LR}
@@ -62,7 +67,8 @@ WAIT_SENT
 					
 
 ; Отправка строки по UART
-; ВХОД: R0 - адрес строки
+; ВХОД - R0 - адрес строки
+; ВЫХОД - подпрограмма ничего не возвращает
 UART_SEND_STR	PROC
 
                 PUSH    {LR}
@@ -85,8 +91,9 @@ STR_END
                 POP     {PC}
                 ENDP 
 
-; Send HEX digit to UART
-; INPUT: R2 as DIGIT
+; Отправка одной цифры в шестнадцатеричной системе в UART
+; ВХОД - R2 - цифра для отправки
+; ВЫХОД - подпрограмма ничего не возвращает
 WRITE_DIGIT_HEX
                 PUSH {LR}
                 PUSH {R2}
@@ -105,8 +112,10 @@ GREATER_THAN9
                 BL UART_SEND_CHR
                 POP {R2}
                 POP {PC}
-                
-; R2 - byte to write
+            
+; Отправка байта в шестнадцатеричной кодировке в UART			
+; ВХОД - R2 - байт для отправки
+; ВЫХОД - подпрограмма ничего не возвращает
 WRITE_BYTE_HEX
                 PUSH {LR}
                 PUSH {R1}
@@ -127,6 +136,9 @@ WRITE_BYTE_HEX
                 POP {R1}
                 POP {PC}
             
+; Запрет прерывания системного таймера
+; ВХОД - входные параметры отсутсвуют
+; ВЫХОД - подпрограмма ничего не возвращает
 DisablePIT		PROC
 	
 				PUSH {LR}	
@@ -152,6 +164,9 @@ DisablePIT		PROC
 	
 				ENDP
 					
+; Разрешение прерывания системного таймера
+; ВХОД - входные параметры отсутсвуют
+; ВЫХОД - подпрограмма ничего не возвращает
 EnablePIT		PROC
 	
 				PUSH {LR}	
@@ -159,13 +174,10 @@ EnablePIT		PROC
 				PUSH {R1}
 				PUSH {R2}
 				
-				; Disable timer interrupt				
-                LDR R0, =PIT_BASE
-				; Clear PITIEN bit
+				LDR R0, =PIT_BASE
+				; Очистка бита PITIEN
 				MOV R1, #1
-				LSL R1, #25
-				
-				; Load to R2 PIT_MR state
+				LSL R1, #25				
 				LDR R2, [R0, #PIT_MR]
 				ORR R2, R1
 				STR R2, [R0, #PIT_MR]
