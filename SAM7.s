@@ -339,7 +339,7 @@ Task1_Proc		PROC
 				
 				BL DisablePIT
 								
-				; Output state to UART
+				; Печатаем значения счетчиков в UART
 				LDR R0, =Task1Msg
 				BL UART_SEND_STR
 				
@@ -368,7 +368,7 @@ Task1_Proc		PROC
                 LDR R0, =CRLF
 				BL UART_SEND_STR
 
-				; Increment counters
+				; Увеличиваем счетчики
 				LDR R0, =CommonCounter
 				LDR R1, [R0]
 				ADD R1, #1
@@ -392,9 +392,8 @@ Task2_Proc		PROC
 				PUSH {R0}
 				PUSH {R1}
 				
-				BL DisablePIT
-	
-				; Output state to UART
+				BL DisablePIT	
+				
 				LDR R0, =Task2Msg
 				BL UART_SEND_STR
 				
@@ -423,7 +422,6 @@ Task2_Proc		PROC
                 LDR R0, =CRLF
 				BL UART_SEND_STR
 
-				; Increment counters
 				LDR R0, =CommonCounter
 				LDR R1, [R0]
 				ADD R1, #1
@@ -448,8 +446,7 @@ Task3_Proc		PROC
 				PUSH {R1}
 				
 				BL DisablePIT
-	
-				; Output state to UART
+					
 				LDR R0, =Task3Msg
 				BL UART_SEND_STR
 				
@@ -478,7 +475,6 @@ Task3_Proc		PROC
                 LDR R0, =CRLF
 				BL UART_SEND_STR
 
-				; Increment counters
 				LDR R0, =CommonCounter
 				LDR R1, [R0]
 				ADD R1, #1
@@ -498,22 +494,22 @@ Task3_Proc		PROC
 
 Timer_IRQ
 
-				; Save Current state to stack
+				; Сохраняем текущее состояние в стек
 				
 				SUB LR, LR, #4
 				STMFD SP!, {R0-R12, LR}
 				
-                ; Dummy read PIT to clear it's IRQ
+                ; Чтение PIT, чтобы снять ЕГО флаг прерывания
                 LDR R0, =PIT_BASE
                 LDR R1, [R0, #PIT_PIVR]
                 
-                ; Clear interrupt in AIC
+                ; Сброс прерывания в AIC
                 LDR R0, =AIC_BASE
                 MOV R1, #0x02                
                 STR R1, [R0, #AIC_ICCR]
                 STR R1, [R0, #AIC_EOICR]
 				                
-				; Print and update next task number
+				; Печатаем и инкрементируем номер следующей задачи
 				LDR R0, =NextTaskNumber
 				LDR R1, [R0]
 				CMP R1, #3				
@@ -528,17 +524,7 @@ Timer_IRQ
 				CMP R1, #3
 				BLEQ Task3_Proc
 				
-                ; Dummy read PIT to clear it's IRQ
- ;               LDR R0, =PIT_BASE
- ;               LDR R1, [R0, #PIT_PIVR]
-                
-                ; Clear interrupt in AIC
- ;               LDR R0, =AIC_BASE
- ;               MOV R1, #0x02                
- ;               STR R1, [R0, #AIC_ICCR]
- ;               STR R1, [R0, #AIC_EOICR]
-				
-				; Restore state from stack and set User mode
+				; Восстанавливаем данные из стека и перехоим в режим User
 				LDMFD SP!,{R0-R12, PC}^
                 
                 END

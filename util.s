@@ -12,7 +12,7 @@ BLINKDELAY		PROC
 				PUSH {R0}
 				PUSH {R1}				
 		
-				MOV R0, #50
+				MOV R0, #100
 				LSL R0, #8
 DELAY_1				
 				SUB R0, #1				
